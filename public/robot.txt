@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://grafixa.vercel.app/sitemap.xml
