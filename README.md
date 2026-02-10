@@ -1,60 +1,111 @@
-# Grafixa Agency Website - Secure & High Performance
+Grafixa Agency Website
 
-Welcome to the Grafixa Agency website. This project uses a secure architecture where the AI logic is handled server-side to protect API keys.
+Official website for Grafixa Agency – a creative agency providing poster design, logo design, branding, and social media services.
 
-## 🔒 Security & Architecture
+This project is built with React and TypeScript, fully static frontend now that the chatbot has been removed.
 
-This project has been refactored to prevent API key leaks:
-1.  **Frontend**: React components (in `components/Chatbot.tsx`) strictly handle UI. They send messages to `/api/chat`.
-2.  **Backend**: A Serverless Function (`api/chat.ts`) handles the actual OpenAI communication.
-3.  **Environment**: The `OPENAI_API_KEY` is stored in the server environment and never sent to the browser.
 
----
 
-## 🛠️ How to Run Locally
 
-Because this project now uses serverless functions for security, you should use the **Vercel CLI** to run it locally. Standard `vite` or `npm start` might not route the `/api` requests correctly.
+🛠️ Tech Stack
 
-1.  **Install Vercel CLI**:
-    ```bash
-    npm i -g vercel
-    ```
+Frontend: React + TypeScript
 
-2.  **Setup Environment**:
-    Rename `.env.example` to `.env` and add your OpenAI Key:
-    ```
-    OPENAI_API_KEY=sk-...
-    ```
+Styling: CSS / Tailwind (if applicable)
 
-3.  **Run Development Server**:
-    ```bash
-    vercel dev
-    ```
-    This will start the frontend and the API backend together at `http://localhost:3000`.
 
----
 
-## ☁️ Deployment
 
-When deploying to Vercel:
-1.  Import the project.
-2.  Go to **Settings > Environment Variables**.
-3.  Add `OPENAI_API_KEY` (Value: your sk-... key).
-4.  Deploy.
+📂 Project Structure
 
-Vercel will automatically detect `api/chat.ts` and deploy it as a serverless function.
+src/
+  components/
+    Header.tsx      # Header section
+    Footer.tsx      # Footer section
+    ...             # Other UI components
+  constants.tsx     # Website content, texts, and translations
+  App.tsx           # Main app layout and routing
 
----
 
-## 📂 Project Structure
 
-- **`api/`**: Server-side logic. Contains `chat.ts` which securely calls OpenAI.
-- **`src/components/Chatbot.tsx`**: The chat UI. Calls the local API endpoint.
-- **`src/constants.tsx`**: Website content and translations.
+✏️ How to Edit
 
----
+1. Website Content
 
-## 📧 Contact & Support
+Open src/constants.tsx.
 
-For website changes, edit `constants.tsx`.
-For API issues, check the Vercel Function logs.
+Edit text, headings, or translations directly.
+
+
+
+2. UI Components
+
+Modify any component inside src/components/ for layout or design changes.
+
+Main layout is in src/App.tsx.
+
+
+
+3. Styling
+
+Update CSS classes directly in components.
+
+If using Tailwind, update class names as needed.
+
+
+
+
+
+
+
+🚀 Running Locally
+
+1. Install dependencies:
+
+
+
+npm install
+
+2. Start the development server:
+
+
+
+npm run dev
+
+3. Open your browser at http://localhost:5173 (or the port Vite shows).
+
+
+
+> ⚠️ No serverless functions are needed; this is now a fully frontend React website.
+
+
+
+
+
+☁️ Deployment on Vercel
+
+1. Import the project in Vercel.
+
+
+2. Since there are no API keys or server functions, no environment variables are needed.
+
+
+3. Deploy – Vercel will host your React app automatically.
+
+
+
+
+
+📧 Support
+
+Website content: src/constants.tsx
+
+Layout and components: src/components/ and src/App.tsx
+
+
+
+
+✅ Website Language: React + TypeScript
+✅ Backend: None (static frontend only)
+
+

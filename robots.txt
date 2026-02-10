@@ -1,3 +1,3 @@
 User-agent: *
 Allow: /
-Sitemap: https://grafixa.agency/sitemap.xml
+Sitemap: https://grafixa.vercel.app/sitemap.xml
