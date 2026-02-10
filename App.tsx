@@ -5,7 +5,9 @@ import { loadSlim } from "@tsparticles/slim";
 import { COMPANY_INFO, PORTFOLIO, REVIEWS, CONTENT, getServices } from './constants';
 
 const Preloader = ({ loading }: { loading: boolean }) => (
-  <div className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-brand-dark transition-opacity duration-700 select-none ${loading ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}>
+  <div 
+    className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-brand-dark transition-all duration-700 ease-out will-change-opacity ${loading ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+  >
      {/* Decorative background glow */}
      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-brand-primary/20 rounded-full blur-[100px] animate-pulse"></div>
 
@@ -52,6 +54,7 @@ export function App() {
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [adBlockDetected, setAdBlockDetected] = useState(false);
   const [showScrollTop, setShowScrollTop] = useState(false);
+  const [scrollProgress, setScrollProgress] = useState(0);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -76,10 +79,10 @@ export function App() {
       document.body.style.overflow = 'unset';
     }
 
-    // Fast loading experience (2.5 seconds)
+    // Fast loading experience (1.2 seconds)
     const loadTimer = setTimeout(() => {
       setLoading(false);
-    }, 2500);
+    }, 1200);
 
     // Particles initialization
     initParticlesEngine(async (engine) => {
@@ -94,14 +97,23 @@ export function App() {
     const handler = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
     mq.addEventListener('change', handler);
 
-    // Scroll listener for Back to Top button
+    // Scroll listener for Back to Top button & Progress Bar
     const handleScroll = () => {
-      if (window.scrollY > 400) {
+      const currentScroll = window.scrollY;
+      
+      // Button visibility (Show after 400px scroll)
+      if (currentScroll > 400) {
         setShowScrollTop(true);
       } else {
         setShowScrollTop(false);
       }
+
+      // Progress Bar Calculation
+      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
+      const progress = totalHeight > 0 ? (currentScroll / totalHeight) * 100 : 0;
+      setScrollProgress(progress);
     };
+
     window.addEventListener('scroll', handleScroll);
 
     // Title animation loop
@@ -267,7 +279,15 @@ export function App() {
       {/* SEO Optimization: Preloader is overlay, Main Content is ALWAYS in DOM */}
       <Preloader loading={loading} />
 
-      <div className={`min-h-screen relative overflow-x-hidden transition-all duration-1000 ${loading ? 'opacity-0 scale-[0.98]' : 'opacity-100 scale-100'} ${isRTL ? 'font-urdu' : 'font-sans'} bg-brand-light dark:bg-brand-dark text-slate-800 dark:text-slate-200 select-none`} dir={isRTL ? 'rtl' : 'ltr'}>
+      {/* Visual Scroll Progress Bar - Fixed at top, fills based on scroll % */}
+      <div className="fixed top-0 left-0 w-full h-1.5 z-[60] bg-transparent pointer-events-none">
+        <div 
+          className="h-full bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-accent transition-all duration-100 ease-out shadow-[0_2px_10px_rgba(37,99,235,0.4)]"
+          style={{ width: `${scrollProgress}%` }}
+        ></div>
+      </div>
+
+      <div className={`min-h-screen relative overflow-x-hidden transition-all duration-1000 ease-out will-change-transform ${loading ? 'opacity-0 scale-[0.98]' : 'opacity-100 scale-100'} ${isRTL ? 'font-urdu' : 'font-sans'} bg-brand-light dark:bg-brand-dark text-slate-800 dark:text-slate-200 select-none`} dir={isRTL ? 'rtl' : 'ltr'}>
         
         {/* AdBlock Warning Modal */}
         {adBlockDetected && (
@@ -732,18 +752,18 @@ export function App() {
             &copy; {new Date().getFullYear()} {t.footer.rights}
           </div>
         </footer>
-        
-        {/* Scroll To Top Button */}
-        {showScrollTop && (
-          <button 
-            onClick={scrollToTop}
-            className="fixed bottom-24 right-6 z-40 p-3 rounded-full bg-slate-800 text-white shadow-xl border border-white/10 hover:bg-brand-primary transition-all duration-300 animate-scale-in"
-            aria-label="Scroll to top"
-          >
-            <ArrowUp size={20} />
-          </button>
-        )}
       </div>
+
+      {/* Scroll To Top Button - Positioned fixed to viewport, OUTSIDE the transformed container to avoid being 'stuck' */}
+      {showScrollTop && (
+        <button 
+          onClick={scrollToTop}
+          className="fixed bottom-8 right-8 z-[100] p-3 rounded-full bg-brand-primary text-white shadow-2xl border border-white/20 hover:bg-brand-secondary hover:-translate-y-1 transition-all duration-300 animate-scale-in backdrop-blur-sm"
+          aria-label="Scroll to top"
+        >
+          <ArrowUp size={24} />
+        </button>
+      )}
     </>
   );
 }
