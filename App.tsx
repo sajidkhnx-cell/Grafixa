@@ -1,42 +1,120 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { Menu, X, ArrowRight, Instagram, Facebook, Mail, MapPin, Phone, MessageCircle, Star, Globe, User, Calendar, CheckCircle2, Linkedin, ShieldAlert, ArrowUp } from 'lucide-react';
 import Particles, { initParticlesEngine } from "@tsparticles/react";
 import { loadSlim } from "@tsparticles/slim";
 import { COMPANY_INFO, PORTFOLIO, REVIEWS, CONTENT, getServices } from './constants';
 
+// --- Optimized Sub-Components to Prevent Main App Re-renders ---
+
+const ScrollProgress = () => {
+  const barRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          if (barRef.current) {
+            const scrollTop = window.scrollY;
+            const docHeight = document.documentElement.scrollHeight;
+            const winHeight = window.innerHeight;
+            const totalHeight = docHeight - winHeight;
+            const progress = totalHeight > 0 ? (scrollTop / totalHeight) * 100 : 0;
+            barRef.current.style.width = `${progress}%`;
+          }
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  return (
+    <div className="fixed top-0 left-0 w-full h-1.5 z-[60] bg-transparent pointer-events-none">
+      <div 
+        ref={barRef}
+        className="h-full bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-accent transition-all duration-75 ease-out shadow-[0_2px_10px_rgba(37,99,235,0.4)]"
+        style={{ width: '0%' }}
+      ></div>
+    </div>
+  );
+};
+
+const ScrollToTop = () => {
+  const [isVisible, setIsVisible] = useState(false);
+
+  useEffect(() => {
+    let ticking = false;
+    const handleScroll = () => {
+      if (!ticking) {
+        window.requestAnimationFrame(() => {
+          // Only update state if value changes to avoid re-renders
+          const shouldShow = window.scrollY > 400;
+          setIsVisible(prev => {
+            if (prev !== shouldShow) return shouldShow;
+            return prev;
+          });
+          ticking = false;
+        });
+        ticking = true;
+      }
+    };
+
+    window.addEventListener('scroll', handleScroll, { passive: true });
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, []);
+
+  const scrollToTop = () => {
+    window.scrollTo({
+      top: 0,
+      behavior: 'smooth'
+    });
+  };
+
+  if (!isVisible) return null;
+
+  return (
+    <button 
+      onClick={scrollToTop}
+      className="fixed bottom-8 right-8 z-[100] p-3 rounded-full bg-brand-primary text-white shadow-2xl border border-white/20 hover:bg-brand-secondary hover:-translate-y-1 transition-all duration-300 animate-scale-in backdrop-blur-sm"
+      aria-label="Scroll to top"
+    >
+      <ArrowUp size={24} />
+    </button>
+  );
+};
+
+// --- Main Components ---
+
 const Preloader = ({ loading }: { loading: boolean }) => (
   <div 
-    className={`fixed inset-0 z-[100] flex flex-col items-center justify-center bg-brand-dark transition-all duration-700 ease-out will-change-opacity ${loading ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
+    className={`fixed inset-0 z-[200] flex flex-col items-center justify-center bg-brand-dark transition-all duration-700 ease-out will-change-opacity ${loading ? 'opacity-100 pointer-events-auto' : 'opacity-0 pointer-events-none'}`}
   >
-     {/* Decorative background glow */}
      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[500px] h-[500px] bg-brand-primary/20 rounded-full blur-[100px] animate-pulse"></div>
-
      <div className="relative z-10 flex flex-col items-center">
-        {/* Logo container with ripple effect */}
         <div className="relative mb-8">
            <div className="absolute inset-0 bg-brand-primary/30 rounded-full animate-ping opacity-75"></div>
            <div className="relative w-28 h-28 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center border border-white/20 p-4 shadow-2xl shadow-brand-primary/50">
               <img
                 src="https://i.ibb.co/qVFGNGj/file-00000000cb7072069c49c9b62833d831.png"
                 alt="Grafixa Loading"
+                loading="eager"
+                decoding="async"
                 className="w-full h-full object-contain drop-shadow-lg"
               />
            </div>
         </div>
-
-        {/* Text Reveal */}
         <div className="overflow-hidden mb-8">
            <h1 className="text-5xl md:text-6xl font-extrabold text-transparent bg-clip-text bg-gradient-to-r from-white via-brand-accent to-white tracking-[0.2em] animate-slide-up">
               GRAFIXA
            </h1>
         </div>
-
-        {/* Custom Progress Bar */}
         <div className="w-64 h-1 bg-white/10 rounded-full overflow-hidden relative">
           <div className="absolute top-0 left-0 h-full bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-accent animate-loader-fast rounded-full"></div>
         </div>
-
-        {/* Loading status text */}
         <p className="mt-4 text-brand-primary/80 text-xs font-mono tracking-widest uppercase animate-pulse">
            Initializing...
         </p>
@@ -53,8 +131,6 @@ export function App() {
   const [init, setInit] = useState(false);
   const [isDarkMode, setIsDarkMode] = useState(false);
   const [adBlockDetected, setAdBlockDetected] = useState(false);
-  const [showScrollTop, setShowScrollTop] = useState(false);
-  const [scrollProgress, setScrollProgress] = useState(0);
   
   // Form State
   const [formData, setFormData] = useState({
@@ -72,51 +148,29 @@ export function App() {
   };
 
   useEffect(() => {
-    // Prevent scrolling while loading for UX
-    if (loading) {
+    // Lock scroll only if loading or adblock
+    if (loading || adBlockDetected) {
       document.body.style.overflow = 'hidden';
     } else {
       document.body.style.overflow = 'unset';
     }
 
-    // Fast loading experience (1.2 seconds)
     const loadTimer = setTimeout(() => {
       setLoading(false);
     }, 1200);
 
-    // Particles initialization
     initParticlesEngine(async (engine) => {
       await loadSlim(engine);
     }).then(() => {
       setInit(true);
     });
 
-    // Dark mode detection
     const mq = window.matchMedia('(prefers-color-scheme: dark)');
     setIsDarkMode(mq.matches);
     const handler = (e: MediaQueryListEvent) => setIsDarkMode(e.matches);
     mq.addEventListener('change', handler);
 
-    // Scroll listener for Back to Top button & Progress Bar
-    const handleScroll = () => {
-      const currentScroll = window.scrollY;
-      
-      // Button visibility (Show after 400px scroll)
-      if (currentScroll > 400) {
-        setShowScrollTop(true);
-      } else {
-        setShowScrollTop(false);
-      }
-
-      // Progress Bar Calculation
-      const totalHeight = document.documentElement.scrollHeight - window.innerHeight;
-      const progress = totalHeight > 0 ? (currentScroll / totalHeight) * 100 : 0;
-      setScrollProgress(progress);
-    };
-
-    window.addEventListener('scroll', handleScroll);
-
-    // Title animation loop
+    // Title animation
     const interval = setInterval(() => {
       setIsAnimatingTitle(true);
       setTimeout(() => {
@@ -129,19 +183,12 @@ export function App() {
       clearTimeout(loadTimer);
       clearInterval(interval);
       mq.removeEventListener('change', handler);
-      window.removeEventListener('scroll', handleScroll);
     };
-  }, [lang, t.hero.titleAnimated.length, loading]);
+  }, [lang, t.hero.titleAnimated.length, loading, adBlockDetected]);
 
-  // --- Content Protection & AdBlock Detection ---
   useEffect(() => {
-    // 1. Content Protection (Right-click & Shortcuts)
-    const handleContextMenu = (e: MouseEvent) => {
-      e.preventDefault();
-    };
-
+    const handleContextMenu = (e: MouseEvent) => e.preventDefault();
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Prevent Ctrl+C, Ctrl+U, Ctrl+S, Ctrl+P, F12, Ctrl+Shift+I
       if (
         (e.ctrlKey && (e.key === 'c' || e.key === 'C' || e.key === 'u' || e.key === 'U' || e.key === 's' || e.key === 'S' || e.key === 'p' || e.key === 'P')) ||
         (e.ctrlKey && e.shiftKey && (e.key === 'i' || e.key === 'I')) ||
@@ -154,7 +201,7 @@ export function App() {
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('keydown', handleKeyDown);
 
-    // 2. AdBlock Detection
+    // AdBlock Detection
     const bait = document.createElement('div');
     bait.setAttribute('class', 'adsbox ad-banner-box doubleclick');
     bait.style.position = 'absolute';
@@ -189,7 +236,7 @@ export function App() {
     background: {
       color: { value: "transparent" },
     },
-    fpsLimit: 60,
+    fpsLimit: 30, // Lower FPS limit to 30 for stability on low-end devices
     interactivity: {
       events: {
         onHover: {
@@ -216,21 +263,17 @@ export function App() {
         width: 1,
       },
       move: {
-        direction: "none" as const,
         enable: true,
-        outModes: {
-          default: "bounce" as const,
-        },
         random: false,
-        speed: 0.8,
+        speed: 0.5, // Slower movement for less calculation
         straight: false,
       },
       number: {
         density: {
           enable: true,
-          area: 1000,
+          area: 1500, // Very low density to prevent canvas crashes
         },
-        value: 40,
+        value: 20, // Very low particle count
       },
       opacity: {
         value: 0.3,
@@ -242,7 +285,7 @@ export function App() {
         value: { min: 1, max: 3 },
       },
     },
-    detectRetina: true,
+    detectRetina: false, // Disable retina detection to save memory
     fullScreen: { enable: false },
   }), [isDarkMode]);
 
@@ -252,13 +295,6 @@ export function App() {
     if (element) {
       element.scrollIntoView({ behavior: 'smooth' });
     }
-  };
-
-  const scrollToTop = () => {
-    window.scrollTo({
-      top: 0,
-      behavior: 'smooth'
-    });
   };
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>) => {
@@ -276,22 +312,16 @@ export function App() {
 
   return (
     <>
-      {/* SEO Optimization: Preloader is overlay, Main Content is ALWAYS in DOM */}
       <Preloader loading={loading} />
+      
+      {/* Scroll Dependent Components */}
+      <ScrollProgress />
+      <ScrollToTop />
 
-      {/* Visual Scroll Progress Bar - Fixed at top, fills based on scroll % */}
-      <div className="fixed top-0 left-0 w-full h-1.5 z-[60] bg-transparent pointer-events-none">
-        <div 
-          className="h-full bg-gradient-to-r from-brand-primary via-brand-secondary to-brand-accent transition-all duration-100 ease-out shadow-[0_2px_10px_rgba(37,99,235,0.4)]"
-          style={{ width: `${scrollProgress}%` }}
-        ></div>
-      </div>
-
-      <div className={`min-h-screen relative overflow-x-hidden transition-all duration-1000 ease-out will-change-transform ${loading ? 'opacity-0 scale-[0.98]' : 'opacity-100 scale-100'} ${isRTL ? 'font-urdu' : 'font-sans'} bg-brand-light dark:bg-brand-dark text-slate-800 dark:text-slate-200 select-none`} dir={isRTL ? 'rtl' : 'ltr'}>
+      <div className={`min-h-screen relative overflow-x-hidden transition-all duration-1000 ease-out ${loading ? 'opacity-0 scale-[0.98]' : 'opacity-100 scale-100'} ${isRTL ? 'font-urdu' : 'font-sans'} bg-brand-light dark:bg-brand-dark text-slate-800 dark:text-slate-200 select-none`} dir={isRTL ? 'rtl' : 'ltr'}>
         
-        {/* AdBlock Warning Modal */}
         {adBlockDetected && (
-          <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
+          <div className="fixed inset-0 z-[200] flex items-center justify-center p-4 bg-black/80 backdrop-blur-md animate-fade-in">
             <div className="bg-white dark:bg-brand-dark border border-red-500/50 rounded-2xl p-8 max-w-md w-full shadow-2xl text-center relative overflow-hidden">
               <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-red-500 via-orange-500 to-red-500"></div>
               <div className="mx-auto w-16 h-16 bg-red-100 dark:bg-red-900/20 rounded-full flex items-center justify-center mb-6">
@@ -314,7 +344,6 @@ export function App() {
           </div>
         )}
 
-        {/* Navigation */}
         <nav className="fixed top-0 left-0 w-full z-40 bg-white/80 dark:bg-brand-dark/90 backdrop-blur-lg border-b border-slate-200 dark:border-white/5 transition-colors duration-300">
           <div className="max-w-7xl mx-auto px-6 h-20 flex items-center justify-between">
             <div className="text-2xl font-bold tracking-tighter text-slate-900 dark:text-white flex items-center gap-2 cursor-pointer group shrink-0" onClick={() => scrollToSection('hero')}>
@@ -382,7 +411,6 @@ export function App() {
           )}
         </nav>
 
-        {/* Hero Section */}
         <section id="hero" className="relative pt-32 pb-20 lg:pt-48 lg:pb-32 px-6 overflow-hidden min-h-[90vh] flex items-center justify-center">
           {init && (
             <Particles
@@ -434,7 +462,6 @@ export function App() {
           </div>
         </section>
 
-        {/* Services Section */}
         <section id="services" className="py-24 px-6 bg-white dark:bg-brand-dark relative transition-colors duration-300">
           <div className="max-w-7xl mx-auto">
             <div className="text-center mb-16">
@@ -462,7 +489,6 @@ export function App() {
           </div>
         </section>
 
-        {/* Portfolio Section */}
         <section id="portfolio" className="py-24 bg-slate-50 dark:bg-black/20 transition-colors duration-300">
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex flex-col md:flex-row justify-between items-end mb-12 gap-4 text-start">
@@ -482,6 +508,7 @@ export function App() {
                     src={project.imageUrl} 
                     alt={project.title} 
                     loading="lazy"
+                    decoding="async"
                     onDragStart={(e) => e.preventDefault()}
                     className="w-full h-full object-cover transition-transform duration-700 group-hover:scale-105 filter dark:brightness-75 dark:group-hover:brightness-100 pointer-events-none md:pointer-events-auto"
                   />
@@ -499,7 +526,6 @@ export function App() {
           </div>
         </section>
 
-        {/* Stats/Trust Section */}
         <section className="py-20 border-y border-slate-200 dark:border-white/5 bg-brand-primary/5">
           <div className="max-w-7xl mx-auto px-6 grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
               <div>
@@ -521,7 +547,6 @@ export function App() {
           </div>
         </section>
 
-        {/* CEO Section */}
         <section id="ceo" className="py-24 relative overflow-hidden bg-white dark:bg-brand-dark transition-colors duration-300">
           <div className="max-w-7xl mx-auto px-6">
             <div className="flex flex-col md:grid md:grid-cols-12 gap-12 items-center">
@@ -534,6 +559,8 @@ export function App() {
                     <img 
                       src="https://i.ibb.co/JWV0vY85/1000019282.jpg" 
                       alt="Sajid Khan CEO" 
+                      loading="lazy"
+                      decoding="async"
                       onDragStart={(e) => e.preventDefault()}
                       className="w-full h-full object-cover transform transition-transform duration-700 group-hover:scale-110 pointer-events-none"
                     />
@@ -604,7 +631,6 @@ export function App() {
           </div>
         </section>
 
-        {/* Reviews Section */}
         <section id="reviews" className="py-24 px-6 bg-slate-50 dark:bg-black/20 transition-colors duration-300">
           <div className="max-w-7xl mx-auto">
             <h2 className="text-3xl md:text-5xl font-bold text-center mb-16 text-slate-900 dark:text-white">{t.reviews.title}</h2>
@@ -619,7 +645,7 @@ export function App() {
                   <p className="text-slate-600 dark:text-slate-300 mb-6 italic leading-relaxed text-sm">"{review.content}"</p>
                   <div className="flex items-center gap-4 border-t border-slate-200 dark:border-white/5 pt-6">
                     <div className="w-10 h-10 rounded-full bg-slate-200 dark:bg-white/10 overflow-hidden shrink-0">
-                       <img src={review.avatarUrl} alt={review.name} className="w-full h-full object-cover" />
+                       <img src={review.avatarUrl} alt={review.name} loading="lazy" decoding="async" className="w-full h-full object-cover" />
                     </div>
                     <div>
                       <h4 className="font-bold text-slate-900 dark:text-white text-sm">{review.name}</h4>
@@ -632,7 +658,6 @@ export function App() {
           </div>
         </section>
 
-        {/* Contact Section */}
         <section id="contact" className="py-24 relative">
           <div className="absolute inset-0 bg-gradient-to-b from-transparent to-brand-primary/5 pointer-events-none"></div>
           <div className="max-w-5xl mx-auto px-6 relative z-10">
@@ -724,7 +749,6 @@ export function App() {
           </div>
         </section>
 
-        {/* Footer */}
         <footer className="py-12 px-6 border-t border-slate-200 dark:border-white/5 bg-slate-100 dark:bg-black transition-colors duration-300">
           <div className="max-w-7xl mx-auto flex flex-col md:flex-row justify-between items-center gap-8">
             <div className="flex items-center gap-2">
@@ -753,17 +777,6 @@ export function App() {
           </div>
         </footer>
       </div>
-
-      {/* Scroll To Top Button - Positioned fixed to viewport, OUTSIDE the transformed container to avoid being 'stuck' */}
-      {showScrollTop && (
-        <button 
-          onClick={scrollToTop}
-          className="fixed bottom-8 right-8 z-[100] p-3 rounded-full bg-brand-primary text-white shadow-2xl border border-white/20 hover:bg-brand-secondary hover:-translate-y-1 transition-all duration-300 animate-scale-in backdrop-blur-sm"
-          aria-label="Scroll to top"
-        >
-          <ArrowUp size={24} />
-        </button>
-      )}
     </>
   );
 }

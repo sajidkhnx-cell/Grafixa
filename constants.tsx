@@ -9,7 +9,7 @@ export const COMPANY_INFO = {
   social: {
     facebook: 'https://www.facebook.com/share/1D7rPdeJ9t/',
     instagram: 'https://www.instagram.com/grafixaofficial',
-    linkedin: 'http://www.linkedin.com/in/sajid-khn'
+    linkedin: 'https://www.linkedin.com/in/sajid-khn'
   }
 };
 

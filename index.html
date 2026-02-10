@@ -94,6 +94,10 @@
     <!-- Performance & Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <!-- Preconnect for Image CDNs -->
+    <link rel="preconnect" href="https://i.ibb.co">
+    <link rel="preconnect" href="https://images.unsplash.com">
+    
     <script src="https://cdn.tailwindcss.com"></script>
     <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800&family=Noto+Nastaliq+Urdu:wght@400;500;600;700&display=swap" rel="stylesheet">
     
@@ -174,17 +178,24 @@
         user-select: text;
       }
 
+      /* Optimized Glass Panel - Removed heavy backdrop-filter for better scroll performance */
       .glass-panel {
-        background: rgba(255, 255, 255, 0.7);
-        backdrop-filter: blur(16px);
-        -webkit-backdrop-filter: blur(16px);
+        background: rgba(255, 255, 255, 0.85);
         border: 1px solid rgba(0, 0, 0, 0.05);
       }
       
       @media (prefers-color-scheme: dark) {
         .glass-panel {
-          background: rgba(255, 255, 255, 0.03);
+          background: rgba(30, 41, 59, 0.7);
           border: 1px solid rgba(255, 255, 255, 0.05);
+        }
+      }
+      
+      /* Only apply blur on devices that can likely handle it, or remove completely for stability */
+      @media screen and (min-width: 1024px) {
+        .glass-panel {
+           backdrop-filter: blur(8px);
+           -webkit-backdrop-filter: blur(8px);
         }
       }
 
